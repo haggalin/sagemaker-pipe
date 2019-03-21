@@ -1,5 +1,9 @@
 #!/usr/bin/env python
-from .version import __version__
+try:
+    from .version import __version__
+except ImportError:
+    __version__ = "unknown"
+
 try:
     # for python 3.x:
     from urllib.parse import urlparse
