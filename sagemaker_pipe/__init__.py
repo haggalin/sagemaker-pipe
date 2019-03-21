@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+from .version import __version__
 try:
     # for python 3.x:
     from urllib.parse import urlparse
@@ -202,6 +202,8 @@ https://boto3.readthedocs.io/en/latest/guide/configuration.html#aws-config-file
 
     parser.add_argument('-d', '--debug', action='store_true',
                         help='enable debug messaging')
+    parser.add_argument('-V', '--version', action='version',
+                        version="%(prog)s (" + __version__ + ")")
     parser.add_argument('-x', '--gunzip', action='store_true',
                         help='inflate gzipped data before streaming it')
     parser.add_argument('-r', '--recordio', action='store_true',

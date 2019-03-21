@@ -1,0 +1,8 @@
+dist/
+.tox/
+.pytest_cache/
+.cache/
+*/**/*.pyc
+sagemaker_pipe/version.py
+*.egg-info/
+.idea/
