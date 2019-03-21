@@ -8,6 +8,7 @@ class TestSageMakerPipe(unittest.TestCase):
     def setUp(self):
         # Create a temporary directory
         self.test_dir = tempfile.mkdtemp()
+        tempfile.mktemp
 
     def tearDown(self):
         # Remove the directory after the test
@@ -35,3 +36,20 @@ class TestSageMakerPipe(unittest.TestCase):
         sm_pipe.delete_fifo(self.test_dir, 'training', 1)
         self.assertFalse(os.path.exists(fifo_path),
                          'Expected the file to have been deleted')
+
+    def test_recordio_wrapper(self):
+        _, filename = tempfile.mkstemp(dir=self.test_dir,text=False)
+        exp_blob = b'my binary blob'
+        with sm_pipe.RecordIOWrapper(filename, 'w') as f:
+            f.write(exp_blob)
+
+        from mxnet.recordio import MXRecordIO
+
+        recordio = MXRecordIO(filename, 'r')
+        blob = recordio.read()
+
+        self.assertEqual(exp_blob, blob)
+        print(filename)
+        print("done")
+
+

@@ -18,12 +18,36 @@ import shutil
 import stat
 
 
+from mxnet.recordio import MXRecordIO
+
+
+class RecordIOWrapper():
+    def __init__(self, *args):
+        self.args = args
+        self.recordio = None
+
+    def __enter__(self):
+        self.recordio = MXRecordIO(*self.args)
+        return self.recordio
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.recordio.close()
+        self.recordio = None
+
+
 def run(args):
     src = args.src
     dest = args.dest
     channel = args.channel
     print('Pipe from src: {} to dest: {} for channel: {}'
           .format(src, dest, channel))
+
+    if args.recordio:
+        def record_wrapper(path):
+            return RecordIOWrapper(path, 'w')
+    else:
+        def record_wrapper(path):
+            return open(path, mode='bw', buffering=0)
 
     if src.startswith("s3://"):
         s3_uri = urlparse(src)
@@ -44,9 +68,9 @@ def run(args):
             tmp_path = dest + '/.' + channel + '.tmp'
             gunzip(src_retriever, tmp_path, sink)
             os.unlink(tmp_path)
-        run_pipe(channel, unzipper, dest)
+        run_pipe(channel, unzipper, record_wrapper, dest)
     else:
-        run_pipe(channel, src_retriever, dest)
+        run_pipe(channel, src_retriever, record_wrapper, dest)
 
 
 def s3_retriever(bucket, prefix, sink):
@@ -79,7 +103,7 @@ def gunzip(src_retriever, tmp_path, sink):
         shutil.copyfileobj(inflated, sink)
 
 
-def run_pipe(channel, src_retriever, dest):
+def run_pipe(channel, src_retriever, record_wrapper, dest):
     for epoch in itertools.count():
         print('Running epoch: {}'.format(epoch))
         # delete previous epoch's fifo if it exists:
@@ -87,7 +111,7 @@ def run_pipe(channel, src_retriever, dest):
 
         try:
             fifo_pth = create_fifo(dest, channel, epoch)
-            with open(fifo_pth, mode='bw', buffering=0) as fifo:
+            with record_wrapper(fifo_pth) as fifo:
                 src_retriever(fifo)
         except IOError as e:
             if e.errno == errno.EPIPE:
@@ -198,9 +222,6 @@ https://boto3.readthedocs.io/en/latest/guide/configuration.html#aws-config-file
     if args.debug:
         logging.basicConfig(format='%(levelname)s: %(message)s',
                             level=logging.DEBUG)
-
-    if args.recordio:
-        logging.warning('recordio wrapping not implemented yet - ignoring!')
 
     run(args)
 
